@@ -1,6 +1,6 @@
 name = "BetterNightVision"
 description = [[
-Version 35
+Version 36
 
 Removes Moggles Black/Red effect and add nightvision with the selected Hotkey	(Default = X)
 The nightvision DOESN'T protect you from charlie (Unless you play in a world without caves(and you are host))
@@ -11,7 +11,7 @@ The snippets of code they've contributed to are shown in the mod's 'modmain.lua'
 ]]
 
 author = "Rockou_"
-version = "35"
+version = "36"
 api_version_dst = 10
 
 dst_compatible = true
@@ -64,7 +64,7 @@ configuration_options = {
         hover = "The key that will toggle night vision",
         options = keylist,
         default = "KEY_X",
-        is_keybind = true,
+        is_keybind = true, -- integration with some config mod i dont remember
     },
     
     {
