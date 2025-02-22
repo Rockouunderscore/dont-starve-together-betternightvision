@@ -82,27 +82,15 @@ local function InGame()
 
 end
 
----@return boolean
-local function PlayerIsGhost(player)
-    -- dont ask
-    return player:HasTag("playerghost") == true
-end
+-- local nightvision_phasefn = {
+--     blendtime = VISION_BLENDTIME,
+--     events = {
+--     },
+--     fn = nil,
+-- }
 
----@return boolean
-local function PlayerHasMoggles(player)
-    -- dont ask
-    return player.replica.inventory:EquipHasTag("nightvision") == true
-end
-
-local nightvision_phasefn = {
-    blendtime = VISION_BLENDTIME,
-    events = {
-    },
-    fn = nil,
-}
-
-local function ResetVision(player)
-    -- print("ROCKOU ResetVision")
+local function OverrideVision(player)
+    print("ROCKOU ResetVision")
     if GHOSTVISION_COLORCUBES_PATCH_MODE == 0 and NIGHTVISION_COLORCUBES_PATCH_MODE == 0 then
         return
     end
@@ -129,8 +117,10 @@ local function ResetVision(player)
     end
 
     playervision:UpdateCCTable()
-    player:PushEvent("ccoverrides", playervision.currentcctable)
-    player:PushEvent("ccphasefn", nightvision_phasefn)
+    if (playervision.currentcctable ~= nil) then
+        player:PushEvent("ccoverrides", playervision.currentcctable)
+    end
+    player:PushEvent("ccphasefn", playervision.currentccphasefn)
 
     playervision.forcenightvision = old_forcenightvision
     playervision.nightvision = old_nightvision
@@ -181,8 +171,8 @@ local function ToggleNightVision()
     --#endregion
 
     --#region re-establish normal vision if we disable
-    
-    ResetVision(player)
+
+    OverrideVision(player)
 
     --#endregion
 
@@ -287,41 +277,10 @@ local function TrySpawnDarknessAlert(inst)
 
 end
 
-local function OnPlayerPostInit_DarknessAlert(inst)
+local function OnPostInit_DarknessAlert(inst)
     if NIGHTVISION_DARKNESS_ALERT_ENABLE == true then
         -- inst:DoPeriodicTask(DARKNESS_ALERT_REFRESH_TIME, TrySpawnDarknessAlert)
         inst:DoTaskInTime(0.25, TrySpawnDarknessAlert)
-    end
-end
-
---#endregion
-
---#region listen to external updates to patch around player vision
-
--- check to change color cubes depending on night vision status and if we have a mole hat or ghost vision
-
-local function PushResetVision(inst)
-    -- print("ROCKOU PushResetVision")
-    -- print(stacktrace())
-    inst:DoTaskInTime(0, ResetVision)
-end
-
-local function OnPlayerPostInit_ResetVision(inst)
-    if NIGHTVISION_COLORCUBES_PATCH_MODE == 1 or GHOSTVISION_COLORCUBES_PATCH_MODE == 1 then
-        inst:ListenForEvent("equip", PushResetVision) -- client only moggle
-        inst:ListenForEvent("unequip", PushResetVision) -- client only moggle
-        inst:ListenForEvent("inventoryclosed", PushResetVision) -- client only moggle death??
-
-        inst:ListenForEvent("changearea", PushResetVision) -- cave nightmare cycle
-        inst:ListenForEvent("phasechange", PushResetVision) -- day cycle phase change
-
-        -- death and revive
-        if inst.player_classified ~= nil then
-            inst.player_classified:ListenForEvent("isghostmodedirty", function (inst)
-                -- print("ROCKOU Event isghostmodedirty")
-                PushResetVision(inst._parent)
-            end)
-        end
     end
 end
 
@@ -332,13 +291,13 @@ function OnPlayerPostInit(inst)
 
     if inst ~= GLOBAL.ThePlayer then return end
 
-    OnPlayerPostInit_ResetVision(inst)
+    -- OnPostInit_ResetVision(inst)
 
-    OnPlayerPostInit_DarknessAlert(inst)
+    OnPostInit_DarknessAlert(inst)
 
 end
 
-if NIGHTVISION_DARKNESS_ALERT_ENABLE == true or NIGHTVISION_COLORCUBES_PATCH_MODE == 1 or GHOSTVISION_COLORCUBES_PATCH_MODE == 1 then
+if NIGHTVISION_DARKNESS_ALERT_ENABLE == true then
 
     AddPlayerPostInit(function(inst)
         -- print("ROCKOU AddPlayerPostInit")
@@ -349,37 +308,93 @@ end
 
 --#region moggles vision patch / delete
 
-if NIGHTVISION_COLORCUBES_PATCH_MODE == 2 or GHOSTVISION_COLORCUBES_PATCH_MODE == 2 then
+--#region listen to external updates to patch around player vision
+
+-- check to change color cubes depending on night vision status and if we have a mole hat or ghost vision
+
+local function PushOverrideVision(inst)
+    -- print("ROCKOU PushResetVision")
+    -- print(stacktrace())
+    -- ResetVision(inst)
+    inst:DoTaskInTime(1/60, OverrideVision)
+end
+
+local function OnPostInit_OverrideVision(inst)
+
+    if (NIGHTVISION_COLORCUBES_PATCH_MODE ~= 1 and GHOSTVISION_COLORCUBES_PATCH_MODE ~= 1) then
+        return
+    end
+
+    inst:ListenForEvent("equip", OverrideVision) -- client only moggle
+    inst:ListenForEvent("unequip", OverrideVision) -- client only moggle
+    inst:ListenForEvent("inventoryclosed", OverrideVision) -- client only moggle, death??
+
+    inst:ListenForEvent("changearea", PushOverrideVision) -- cave nightmare cycle / push leaves some time between for the game to do its things and set the nightmare color cubes
+    -- inst:ListenForEvent("nightmarevision", PushResetVision) -- cave leave and enter ruins
+    -- inst:ListenForEvent("nightmarephasechanged", PushResetVision) -- cave nightmare cycle
+
+    inst:ListenForEvent("phasechange", OverrideVision) -- day cycle phase change
+
+    -- death and revive
+    if inst.player_classified ~= nil then
+        inst.player_classified:ListenForEvent("isghostmodedirty", function (inst)
+            -- print("ROCKOU Event isghostmodedirty")
+            OverrideVision(inst._parent)
+        end)
+    end
+
+end
+
+--#endregion
+
+--#region
+
+local function OnPostInit_PatchVision(self)
+
+    if (NIGHTVISION_COLORCUBES_PATCH_MODE ~= 2 and GHOSTVISION_COLORCUBES_PATCH_MODE ~= 2) then
+        return
+    end
+
+    local oldUpdateCCTable = self.UpdateCCTable
+    local newUpdateCCTable = function (self)
+        -- print("ROCKOU newUpdateCCTable")
+        -- print(stacktrace())
+
+        local old_forcenightvision = self.forcenightvision
+        local old_nightvision = self.nightvision
+        local old_ghostvision = self.ghostvision
+
+        if NIGHTVISION_COLORCUBES_PATCH_MODE == 2 then
+            self.forcenightvision = false
+            self.nightvision = false
+        end
+        if GHOSTVISION_COLORCUBES_PATCH_MODE == 2 then
+            self.ghostvision = false
+        end
+
+        oldUpdateCCTable(self)
+        self.inst:PushEvent("ccoverrides", self.currentcctable)
+        self.inst:PushEvent("ccphasefn", self.currentccphasefn)
+    
+        self.forcenightvision = old_forcenightvision
+        self.nightvision = old_nightvision
+        self.ghostvision = old_ghostvision
+
+    end
+    self.UpdateCCTable = newUpdateCCTable
+end
+
+--#endregion
+
+if NIGHTVISION_COLORCUBES_PATCH_MODE == 1 or NIGHTVISION_COLORCUBES_PATCH_MODE == 2 or GHOSTVISION_COLORCUBES_PATCH_MODE == 1 or GHOSTVISION_COLORCUBES_PATCH_MODE == 2 then
 
     AddComponentPostInit("playervision", function (self)
 
-        local oldUpdateCCTable = self.UpdateCCTable
-        local newUpdateCCTable = function (self)
-            -- print("ROCKOU newUpdateCCTable")
-            -- print(stacktrace())
+        -- checks on whether to run is whithin
 
-            local old_forcenightvision = self.forcenightvision
-            local old_nightvision = self.nightvision
-            local old_ghostvision = self.ghostvision
+        OnPostInit_OverrideVision(self.inst)
 
-            if NIGHTVISION_COLORCUBES_PATCH_MODE >= 2 then
-                self.forcenightvision = false
-                self.nightvision = false
-            end
-            if GHOSTVISION_COLORCUBES_PATCH_MODE >= 2 then
-                self.ghostvision = false
-            end
-
-            oldUpdateCCTable(self)
-            self.inst:PushEvent("ccoverrides", self.currentcctable)
-            self.inst:PushEvent("ccphasefn", nightvision_phasefn)
-        
-            self.forcenightvision = old_forcenightvision
-            self.nightvision = old_nightvision
-            self.ghostvision = old_ghostvision
-
-        end
-        self.UpdateCCTable = newUpdateCCTable
+        OnPostInit_PatchVision(self)
 
     end)
 

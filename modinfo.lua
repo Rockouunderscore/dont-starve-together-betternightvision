@@ -1,6 +1,6 @@
 name = "BetterNightVision"
 description = [[
-Version 36
+Version 37
 
 Removes Moggles Black/Red effect and add nightvision with the selected Hotkey	(Default = X)
 The nightvision DOESN'T protect you from charlie (Unless you play in a world without caves(and you are host))
@@ -11,12 +11,14 @@ The snippets of code they've contributed to are shown in the mod's 'modmain.lua'
 ]]
 
 author = "Rockou_"
-version = "36"
+version = "37"
 api_version_dst = 10
 
 dst_compatible = true
 all_clients_require_mod = false
 client_only_mod = true
+
+-- priority = -1
 
 local string = ""
 local keys = {
@@ -113,14 +115,14 @@ configuration_options = {
         hover = "Shows an indicator when in darkness and the night vision is active",
         options = {
             {
-                description = "Disabled",
-                hover = "",
-                data = false
-            },
-            {
                 description = "Enabled",
                 hover = "",
                 data = true
+            },
+            {
+                description = "Disabled",
+                hover = "",
+                data = false
             }
         },
         default = true
@@ -235,50 +237,6 @@ configuration_options = {
     },
 
     Title("Game behavior edits"),
-
-    {
-        name = "VISION_BLENDTIME",
-        label = "Blend time (photosensitivity)",
-        hover = "blendtime for when we update color cubes, frame time is at 60 frame per second, 1 frame is 0.01667 second, ask in comments for additional options",
-        options = {
-            {
-                description = "1 frame",
-                hover = "Instant",
-                data = 1/60
-            },
-            {
-                description = "5 frames",
-                hover = "",
-                data = 5/60
-            },
-            {
-                description = "10 frames",
-                hover = "",
-                data = 10/60
-            },
-            {
-                description = "15 frames",
-                hover = "Default for moggle vision",
-                data = 15/60
-            },
-            {
-                description = "30 frames",
-                hover = "",
-                data = 30/60
-            },
-            {
-                description = "45 frames",
-                hover = "",
-                data = 30/60
-            },
-            {
-                description = "60 frames",
-                hover = "",
-                data = 1
-            }
-        },
-        default = 1/60
-    },
 
     {
         name = "NIGHTVISION_COLORCUBES_PATCH_MODE",
