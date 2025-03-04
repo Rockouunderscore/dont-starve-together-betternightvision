@@ -90,7 +90,7 @@ end
 -- }
 
 local function OverrideVision(player)
-    print("ROCKOU ResetVision")
+    -- print("ROCKOU OverrideVision")
     if GHOSTVISION_COLORCUBES_PATCH_MODE == 0 and NIGHTVISION_COLORCUBES_PATCH_MODE == 0 then
         return
     end
