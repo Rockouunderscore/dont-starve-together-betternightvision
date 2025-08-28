@@ -36,6 +36,9 @@ local NIGHTVISION_DARKNESS_ALERT_TRESHOLD = GetModConfigData("NIGHTVISION_DARKNE
 ---@type number
 local NIGHTVISION_DARKNESS_ALERT_FREQUENCY = GetModConfigData("NIGHTVISION_DARKNESS_ALERT_FREQUENCY")
 
+---@type boolean
+local NIGHTVISION_DARKNESS_ALERT_ALWAYS = GetModConfigData("NIGHTVISION_DARKNESS_ALERT_ALWAYS")
+
 ---@type 0|1|2|3
 local NIGHTVISION_COLORCUBES_PATCH_MODE = GetModConfigData("NIGHTVISION_COLORCUBES_PATCH_MODE")
 
@@ -264,8 +267,11 @@ local function TrySpawnDarknessAlert(inst)
     -- end
 
     local time_until_next_attempt = NIGHTVISION_DARKNESS_ALERT_FREQUENCY
+
+    local active = nightvision_active or NIGHTVISION_DARKNESS_ALERT_ALWAYS
+    local in_darkness = inst.LightWatcher and inst.LightWatcher:GetLightValue() < NIGHTVISION_DARKNESS_ALERT_TRESHOLD
     
-    if inst.LightWatcher and inst.LightWatcher:GetLightValue() < NIGHTVISION_DARKNESS_ALERT_TRESHOLD and nightvision_active then
+    if in_darkness and active then
         -- this should allow it to be slightly more responsive with low framerate
         local time_between_alerts = (GLOBAL.FRAMES*(NIGHTVISION_DARKNESS_ALERT_SCALE_ITERATIONS*2+1))/NIGHTVISION_DARKNESS_ALERT_ACTIVE_COUNT_MAX
         time_until_next_attempt = math.max(time_between_alerts, NIGHTVISION_DARKNESS_ALERT_FREQUENCY)
